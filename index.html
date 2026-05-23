@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DP Admin — Order Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c120a;--bg2:#111908;--bg3:#161f0c;--bg4:#1c2710;
+  --border:#253018;--border2:#304020;
+  --green:#5a9e30;--green2:#4a8228;--green3:#3d6e22;
+  --green-dim:#0e1c08;--green-text:#7ec84a;--green-muted:#2a4015;
+  --fg:#ede8dc;--fg2:#c8bfa8;--fg3:#8a8070;--fg4:#5a5448;
+  --amber:#f59e0b;--red:#dc2626;--blue:#38bdf8;
+  --radius:12px;--radius-sm:8px;--radius-lg:18px;
+  --gold:#f7c948;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+textarea,input,select{font-family:inherit;color:var(--fg)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── LAYOUT ────────────────────────────────────── */
+.app{display:grid;grid-template-columns:380px 1fr;min-height:100vh}
+@media(max-width:860px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+
+/* ── LEFT PANEL ───────────────────────────────── */
+.left{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.left-hdr{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.left-logo{width:36px;height:36px;background:var(--green3);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.left-title{font-size:15px;font-weight:800}
+.left-sub{font-size:11px;color:var(--green-text);margin-top:1px}
+.left-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:18px}
+
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--fg4);margin-bottom:8px}
+
+.paste-box{display:flex;flex-direction:column;gap:8px}
+.paste-ta{width:100%;height:200px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--fg2);resize:vertical;line-height:1.55;font-family:'JetBrains Mono',monospace}
+.paste-ta:focus{outline:none;border-color:var(--green)}
+.paste-ta::placeholder{color:var(--fg4)}
+.parse-btn{width:100%;padding:11px;background:linear-gradient(135deg,var(--green3),var(--green2));color:#fff;border-radius:var(--radius-sm);font-size:14px;font-weight:700;transition:opacity .15s}
+.parse-btn:hover{opacity:.88}
+
+/* ── STATUS CONTROLS ─────────────────────────── */
+.status-controls{display:flex;flex-direction:column;gap:8px}
+.step-btn{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);font-size:13px;font-weight:500;transition:border-color .15s,background .15s;text-align:left}
+.step-btn:hover:not(:disabled){border-color:var(--border2);background:var(--bg4)}
+.step-btn:disabled{opacity:.4;cursor:not-allowed}
+.step-btn.active{border-color:var(--green);background:var(--green-dim);color:var(--green-text)}
+.step-btn.done{border-color:var(--green-muted);opacity:.55}
+.step-btn.done .step-ico{color:var(--green-text)}
+.step-ico{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.step-ts{font-size:10px;color:var(--fg4);margin-top:1px;font-family:'JetBrains Mono',monospace}
+
+.pay-block{display:flex;flex-direction:column;gap:8px}
+.pay-toggle{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--bg3);font-size:14px;font-weight:600;transition:all .2s}
+.pay-toggle:hover{border-color:var(--green-muted)}
+.pay-toggle.paid{border-color:var(--green);background:var(--green-dim);color:var(--green-text)}
+.pay-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--fg4);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:all .2s}
+.pay-toggle.paid .pay-check{background:var(--green);border-color:var(--green);color:#fff}
+.pay-ts{font-size:11px;color:var(--green-text);font-family:'JetBrains Mono',monospace}
+
+.note-input{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--fg2);resize:vertical;min-height:72px}
+.note-input:focus{outline:none;border-color:var(--green)}
+
+.action-btns{display:flex;flex-direction:column;gap:8px}
+.print-btn{width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:background .15s}
+.print-btn:hover{background:var(--bg3)}
+.clear-btn{width:100%;padding:10px;border-radius:var(--radius-sm);font-size:12px;color:var(--fg4);border:1px solid var(--border);transition:background .15s}
+.clear-btn:hover{background:var(--bg3)}
+
+/* ── RIGHT PANEL ─────────────────────────────── */
+.right{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 24px 60px;overflow-y:auto;background:var(--bg)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;flex:1;text-align:center;color:var(--fg4);padding:60px 24px;min-height:400px}
+.empty-icon{font-size:48px;opacity:.3}
+.empty-text{font-size:15px;max-width:280px;line-height:1.6}
+
+/* ── ORDER CARD (screenshot target) ─────────── */
+.order-card{width:100%;max-width:640px;background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden}
+
+.card-top{background:linear-gradient(135deg,#0a1a06 0%,#122008 50%,#0c1a08 100%);padding:24px 28px 20px;position:relative;overflow:hidden}
+.card-top::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(90,158,48,.12),transparent 70%);pointer-events:none}
+.card-watermark{position:absolute;right:20px;bottom:10px;opacity:.04;font-size:64px;font-weight:900;color:var(--green-text);pointer-events:none;user-select:none}
+.card-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.card-ref{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--green-text);letter-spacing:.5px}
+.card-date{font-size:11px;color:var(--fg4);margin-top:4px}
+.card-status-pill{padding:5px 12px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;border:1px solid transparent}
+.status-received{background:rgba(56,189,248,.12);color:var(--blue);border-color:rgba(56,189,248,.25)}
+.status-confirmed{background:rgba(247,201,72,.1);color:var(--gold);border-color:rgba(247,201,72,.25)}
+.status-packed{background:rgba(168,85,247,.1);color:#c084fc;border-color:rgba(168,85,247,.25)}
+.status-transit{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.3)}
+.status-delivered{background:rgba(90,158,48,.15);color:var(--green-text);border-color:var(--green-muted)}
+
+.card-customer{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+.cc-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--fg2)}
+.cc-icon{color:var(--fg4);flex-shrink:0}
+
+.card-body{padding:20px 28px}
+.card-section{margin-bottom:20px}
+.card-section:last-child{margin-bottom:0}
+.cs-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--fg4);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.cs-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:12px}
+.item-row:last-child{border-bottom:none}
+.item-name{font-size:13px;font-weight:600;color:var(--fg)}
+.item-qty{font-size:11px;color:var(--fg4)}
+.item-price{font-size:13px;font-weight:700;color:var(--green-text);white-space:nowrap}
+
+.pay-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pay-method{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.pay-status-badge{padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700}
+.psb-pending{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.psb-paid{background:rgba(90,158,48,.15);color:var(--green-text);border:1px solid var(--green-muted)}
+
+/* ── PROGRESS TIMELINE ───────────────────────── */
+.timeline{display:flex;flex-direction:column;gap:0;position:relative}
+.tl-step{display:flex;align-items:flex-start;gap:14px;position:relative;padding-bottom:20px}
+.tl-step:last-child{padding-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;z-index:1}
+.tl-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .3s}
+.tl-line{width:2px;flex:1;min-height:20px;background:var(--border);margin-top:2px}
+.tl-step:last-child .tl-line{display:none}
+.tl-content{padding-top:5px;min-width:0}
+.tl-label{font-size:13px;font-weight:600;color:var(--fg3)}
+.tl-sublabel{font-size:11px;color:var(--fg4);margin-top:2px}
+.tl-ts{font-size:10px;color:var(--green-text);font-family:'JetBrains Mono',monospace;margin-top:3px}
+
+/* step states */
+.tl-step.done .tl-dot{background:var(--green3);border-color:var(--green);color:#fff}
+.tl-step.done .tl-line{background:linear-gradient(to bottom,var(--green),var(--border))}
+.tl-step.done .tl-label{color:var(--fg)}
+.tl-step.active .tl-dot{background:var(--green-dim);border-color:var(--green-text);color:var(--green-text);box-shadow:0 0 14px rgba(90,158,48,.35)}
+.tl-step.active .tl-label{color:var(--green-text);font-weight:700}
+.tl-step.all-done .tl-dot{background:var(--green);border-color:#7ec84a;color:#fff;box-shadow:0 0 18px rgba(90,158,48,.5)}
+
+.card-footer{padding:14px 28px;background:var(--bg3);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.card-footer-brand{font-size:11px;color:var(--fg4);display:flex;align-items:center;gap:6px}
+.card-footer-ref{font-size:10px;color:var(--fg4);font-family:'JetBrains Mono',monospace}
+
+.insurance-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--fg3)}
+.ins-badge{padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(90,158,48,.1);color:var(--green-text);border:1px solid var(--green-muted)}
+.notes-box{background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--fg3);border:1px solid var(--border);line-height:1.5;margin-top:8px}
+
+/* ── PRINT / SCREENSHOT MODE ──────────────────── */
+@media print{
+  .left,.no-print{display:none!important}
+  .app{display:block}
+  .right{padding:0;background:#fff}
+  .order-card{border:none;border-radius:0;max-width:100%}
+  :root{--bg:#fff;--bg2:#fff;--bg3:#f5f5f5;--bg4:#eee;--fg:#111;--fg2:#222;--fg3:#444;--fg4:#777;--border:#ddd;--border2:#ccc}
+  body{background:#fff;color:#111}
+  .card-top{background:#f0f7ea!important}
+  .card-ref{color:#3d6e22!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ════════════════════════════════════════
+       LEFT PANEL — controls
+  ═════════════════════════════════════════ -->
+  <div class="left">
+    <div class="left-hdr">
+      <div class="left-logo">
+        <svg viewBox="0 0 100 120" fill="#fff" width="20" height="20"><path d="M50 118 L48 82 C43 83 37 85 32 83 C29 76 33 69 39 65 C33 67 26 66 21 62 C20 55 25 50 31 48 C24 46 16 43 12 37 C15 30 22 28 29 29 C24 23 22 15 24 8 C31 8 37 14 40 21 C42 13 46 7 50 4 C54 7 58 13 60 21 C63 14 69 8 76 8 C78 15 76 23 71 29 C78 28 85 30 88 37 C84 43 76 46 69 48 C75 50 80 55 79 62 C74 66 67 67 61 65 C67 69 71 76 68 83 C63 85 57 83 52 82 Z"/></svg>
+      </div>
+      <div>
+        <div class="left-title">DP Admin</div>
+        <div class="left-sub">Order Tracker — Internal Use Only</div>
+      </div>
+    </div>
+
+    <div class="left-body">
+
+      <!-- PASTE ORDER -->
+      <div class="paste-box">
+        <div class="section-label">Paste Order Text</div>
+        <textarea class="paste-ta" id="paste-ta" placeholder="Paste the Telegram order message here...
+
+🌿 *NEW ORDER — DP-XXXXXX*
+
+👤 *Name:* ...
+📱 *Contact:* ...
+🌍 *Location:* ...
+💳 *Payment:* ...
+
+📦 *ORDER DETAILS:*
+• Item × qty — $XX each
+
+🛡️ *Insurance:* ..."></textarea>
+        <button class="parse-btn" onclick="parseOrder()">⚡ Parse &amp; Load Order</button>
+      </div>
+
+      <!-- STATUS STEPS -->
+      <div id="step-controls" style="display:none">
+        <div class="section-label">Order Status</div>
+        <div class="status-controls" id="step-btns"></div>
+      </div>
+
+      <!-- PAYMENT -->
+      <div id="pay-controls" style="display:none">
+        <div class="section-label">Payment</div>
+        <div class="pay-block">
+          <button class="pay-toggle" id="pay-toggle-btn" onclick="togglePayment()">
+            <div class="pay-check" id="pay-check">✓</div>
+            <div>
+              <div id="pay-toggle-label">Mark Payment Received</div>
+              <div class="pay-ts" id="pay-ts" style="display:none"></div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div id="note-controls" style="display:none">
+        <div class="section-label">Internal Notes</div>
+        <textarea class="note-input" id="note-input" placeholder="Tracking number, notes, special instructions..." oninput="updateNotes()"></textarea>
+      </div>
+
+      <!-- ACTIONS -->
+      <div id="action-controls" style="display:none" class="action-btns">
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Screenshot</button>
+        <button class="clear-btn" onclick="clearOrder()">✕ Clear &amp; New Order</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       RIGHT PANEL — order card
+  ═════════════════════════════════════════ -->
+  <div class="right" id="right-panel">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">Paste a Telegram order message on the left and click <strong>Parse &amp; Load Order</strong> to generate the tracking card.</div>
+    </div>
+    <div id="order-card-wrap" style="display:none;width:100%;display:none;justify-content:center"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let order = null;
+let paymentDone = false;
+let paymentTime = null;
+let currentStep = 0; // 0 = nothing parsed, 1–5 = step index
+let stepTimes = [];
+
+const STEPS = [
+  { label: "Order Received",         sub: "Order submitted via shop",     icon: "📩" },
+  { label: "Payment Confirmed",      sub: "Payment received & verified",  icon: "💰" },
+  { label: "Packed & Sealed",        sub: "Package prepped for dispatch",  icon: "📦" },
+  { label: "Dispatched / In Transit",sub: "Shipped — tracking active",    icon: "✈️" },
+  { label: "Delivered",              sub: "Package received by customer", icon: "✅" }
+];
+
+const STATUS_PILLS = [
+  { cls: "status-received",  label: "Order Received"  },
+  { cls: "status-confirmed", label: "Payment Pending" },
+  { cls: "status-confirmed", label: "Processing"      },
+  { cls: "status-packed",    label: "Packed"          },
+  { cls: "status-transit",   label: "In Transit"      },
+  { cls: "status-delivered", label: "Delivered"       }
+];
+
+const PAY_ICONS = {
+  "bitcoin":"₿", "crypto":"₿", "btc":"₿", "xmr":"⬡", "eth":"Ξ",
+  "gift":"🎁", "gift card":"🎁", "gift cards":"🎁",
+  "cash app":"💚", "cashapp":"💚",
+  "western union":"🏦"
+};
+
+// ═══════════════════════════════════════════════════════
+//  PARSE
+// ═══════════════════════════════════════════════════════
+function parseOrder() {
+  const raw = document.getElementById("paste-ta").value.trim();
+  if (!raw) return;
+
+  const get = (emoji) => {
+    const rx = new RegExp(emoji + "\\s*\\*?\\w[^:]*:\\*?\\s*(.+)", "i");
+    const m = raw.match(rx);
+    return m ? m[1].replace(/\*/g,"").trim() : null;
+  };
+
+  // Reference number
+  const refMatch = raw.match(/DP-(\d{6})/i);
+  const ref = refMatch ? "DP-" + refMatch[1] : "DP-??????";
+
+  // Date: use today
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US",{weekday:"short",year:"numeric",month:"short",day:"numeric"});
+  const timeStr = now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+
+  // Fields
+  const name     = get("👤") || "—";
+  const contact  = get("📱") || "—";
+  const location = get("🌍") || "—";
+  const payment  = get("💳") || "—";
+  const insurance= raw.match(/Insurance.*?(Yes|No)/i) ? raw.match(/Insurance.*?(Yes|No)/i)[1] : "No";
+
+  // Notes
+  const notesMatch = raw.match(/📝\s*\*?Notes:\*?\s*(.+)/i);
+  const notes = notesMatch ? notesMatch[1].replace(/\*/g,"").trim() : null;
+
+  // Items — lines starting with •
+  const items = [];
+  const itemLines = raw.match(/^•\s*.+/gm) || [];
+  itemLines.forEach(line => {
+    const clean = line.replace(/^•\s*/,"").replace(/\*/g,"").trim();
+    // Try to parse: "Name (size) × qty — $price each"
+    const m = clean.match(/^(.+?)\s*×\s*(\d+)\s*(?:—|–)\s*(.+?)(?:\s*each)?$/i);
+    if (m) {
+      items.push({ name: m[1].trim(), qty: m[2].trim(), price: m[3].trim() });
+    } else {
+      items.push({ name: clean, qty: "—", price: "—" });
+    }
+  });
+  // Insurance item
+  if (insurance === "Yes") items.push({ name: "🛡️ Shipping Insurance", qty: "1", price: "$20" });
+
+  order = { ref, dateStr, timeStr, name, contact, location, payment, insurance, notes, items };
+  paymentDone = false;
+  paymentTime = null;
+  currentStep = 1;
+  stepTimes = [now, null, null, null, null];
+
+  renderCard();
+  showControls();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function fmtTime(d) {
+  if (!d) return "";
+  return d.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " +
+         d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+}
+
+function payIcon(pm) {
+  const key = pm.toLowerCase();
+  for (const k in PAY_ICONS) if (key.includes(k)) return PAY_ICONS[k];
+  return "💳";
+}
+
+function renderCard() {
+  if (!order) return;
+  const pill = STATUS_PILLS[Math.min(currentStep, STATUS_PILLS.length-1)];
+
+  const internalNote = document.getElementById("note-input") ? document.getElementById("note-input").value.trim() : "";
+
+  const html = `
+  <div class="order-card" id="order-card">
+    <!-- TOP -->
+    <div class="card-top">
+      <div class="card-watermark">DP</div>
+      <div class="card-top-row">
+        <div>
+          <div class="card-ref">${order.ref}</div>
+          <div class="card-date">Received: ${order.dateStr} at ${order.timeStr}</div>
+        </div>
+        <div class="card-status-pill ${pill.cls}">${pill.label}</div>
+      </div>
+      <div class="card-customer">
+        <div class="cc-item"><span class="cc-icon">👤</span>${order.name}</div>
+        <div class="cc-item"><span class="cc-icon">📱</span>${order.contact}</div>
+        <div class="cc-item"><span class="cc-icon">🌍</span>${order.location}</div>
+        <div class="cc-item"><span class="cc-icon">💳</span>${order.payment}</div>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="card-body">
+
+      <!-- ITEMS -->
+      <div class="card-section">
+        <div class="cs-title">Order Items</div>
+        ${order.items.length ? order.items.map(i => `
+          <div class="item-row">
+            <div>
+              <div class="item-name">${i.name}</div>
+              <div class="item-qty">Qty: ${i.qty}</div>
+            </div>
+            <div class="item-price">${i.price}${i.qty !== "1" && i.price !== "—" ? " ea" : ""}</div>
+          </div>`).join("") : '<div style="color:var(--fg4);font-size:13px;padding:8px 0">No items parsed</div>'}
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="card-section">
+        <div class="cs-title">Payment</div>
+        <div class="pay-row">
+          <div class="pay-method">${payIcon(order.payment)} ${order.payment}</div>
+          ${paymentDone
+            ? `<div class="pay-status-badge psb-paid">✓ Confirmed ${paymentTime ? fmtTime(paymentTime) : ""}</div>`
+            : `<div class="pay-status-badge psb-pending">⏳ Awaiting Payment</div>`}
+        </div>
+      </div>
+
+      <!-- PROGRESS TIMELINE -->
+      <div class="card-section">
+        <div class="cs-title">Shipping Progress</div>
+        <div class="timeline">
+          ${STEPS.map((s,i) => {
+            const idx = i + 1;
+            let cls = "";
+            if (idx < currentStep) cls = "done";
+            else if (idx === currentStep) cls = idx === 5 ? "all-done" : "active";
+            const ts = stepTimes[i] ? `<div class="tl-ts">${fmtTime(stepTimes[i])}</div>` : "";
+            const isLast = i === STEPS.length - 1;
+            return `<div class="tl-step ${cls}">
+              <div class="tl-left">
+                <div class="tl-dot">${cls ? (cls==="active"||cls==="all-done" ? s.icon : "✓") : (i+1)}</div>
+                ${!isLast ? '<div class="tl-line"></div>' : ''}
+              </div>
+              <div class="tl-content">
+                <div class="tl-label">${s.label}</div>
+                <div class="tl-sublabel">${s.sub}</div>
+                ${ts}
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      ${order.notes || internalNote ? `<div class="card-section">
+        <div class="cs-title">Notes</div>
+        ${order.notes ? `<div class="notes-box">📝 ${order.notes}</div>` : ""}
+        ${internalNote ? `<div class="notes-box" style="margin-top:6px">🔒 ${internalNote}</div>` : ""}
+      </div>` : ""}
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="card-footer">
+      <div class="card-footer-brand">
+        <svg viewBox="0 0 100 120" fill="currentColor" width="12" height="14" style="color:var(--green-text);flex-shrink:0"><path d="M50 118 L48 82 C43 83 37 85 32 83 C29 76 33 69 39 65 C33 67 26 66 21 62 C20 55 25 50 31 48 C24 46 16 43 12 37 C15 30 22 28 29 29 C24 23 22 15 24 8 C31 8 37 14 40 21 C42 13 46 7 50 4 C54 7 58 13 60 21 C63 14 69 8 76 8 C78 15 76 23 71 29 C78 28 85 30 88 37 C84 43 76 46 69 48 C75 50 80 55 79 62 C74 66 67 67 61 65 C67 69 71 76 68 83 C63 85 57 83 52 82 Z"/></svg>
+        Dwarf Plug — Internal Use Only
+      </div>
+      <div class="card-footer-ref">${order.ref} · Generated ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
+    </div>
+  </div>`;
+
+  const wrap = document.getElementById("order-card-wrap");
+  wrap.innerHTML = html;
+  wrap.style.display = "flex";
+  document.getElementById("empty-state").style.display = "none";
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════════
+function showControls() {
+  ["step-controls","pay-controls","note-controls","action-controls"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "block";
+  });
+  renderStepBtns();
+  updatePayBtn();
+}
+
+function renderStepBtns() {
+  const container = document.getElementById("step-btns");
+  container.innerHTML = STEPS.map((s, i) => {
+    const idx = i + 1;
+    let cls = "";
+    if (idx < currentStep) cls = "done";
+    else if (idx === currentStep) cls = "active";
+    else cls = "";
+    const ts = stepTimes[i] ? `<div class="step-ts">${fmtTime(stepTimes[i])}</div>` : "";
+    const disabled = idx < currentStep || idx > currentStep + 1 ? "disabled" : "";
+    return `<button class="step-btn ${cls}" ${disabled} onclick="setStep(${idx})">
+      <span class="step-ico">${s.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div>${s.label}</div>
+        ${ts}
+      </div>
+      ${cls==="done" ? '<span style="color:var(--green-text);font-size:12px">✓</span>' : ""}
+      ${cls==="active" ? '<span style="color:var(--green-text);font-size:10px">NOW</span>' : ""}
+    </button>`;
+  }).join("");
+}
+
+function setStep(idx) {
+  if (!order) return;
+  // If stepping forward, record time
+  if (idx > currentStep) {
+    for (let i = currentStep; i < idx; i++) {
+      if (!stepTimes[i]) stepTimes[i] = new Date();
+    }
+  }
+  currentStep = idx;
+  // Auto-confirm payment when step 2 is set
+  if (idx >= 2 && !paymentDone) {
+    paymentDone = true;
+    paymentTime = new Date();
+    updatePayBtn();
+  }
+  renderStepBtns();
+  renderCard();
+}
+
+function togglePayment() {
+  if (!order) return;
+  paymentDone = !paymentDone;
+  paymentTime = paymentDone ? new Date() : null;
+  // Advance to step 2 if payment confirmed and still on step 1
+  if (paymentDone && currentStep === 1) {
+    currentStep = 2;
+    stepTimes[1] = paymentTime;
+    renderStepBtns();
+  }
+  updatePayBtn();
+  renderCard();
+}
+
+function updatePayBtn() {
+  const btn = document.getElementById("pay-toggle-btn");
+  const lbl = document.getElementById("pay-toggle-label");
+  const ts  = document.getElementById("pay-ts");
+  if (!btn) return;
+  if (paymentDone) {
+    btn.classList.add("paid");
+    lbl.textContent = "✓ Payment Confirmed";
+    ts.textContent = fmtTime(paymentTime);
+    ts.style.display = "block";
+  } else {
+    btn.classList.remove("paid");
+    lbl.textContent = "Mark Payment Received";
+    ts.style.display = "none";
+  }
+}
+
+function updateNotes() {
+  if (order) renderCard();
+}
+
+function clearOrder() {
+  order = null;
+  paymentDone = false;
+  paymentTime = null;
+  currentStep = 0;
+  stepTimes = [];
+  document.getElementById("paste-ta").value = "";
+  document.getElementById("note-input").value = "";
+  document.getElementById("order-card-wrap").style.display = "none";
+  document.getElementById("empty-state").style.display = "flex";
+  ["step-controls","pay-controls","note-controls","action-controls"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+}
+</script>
+</body>
+</html>
