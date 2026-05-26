@@ -190,13 +190,17 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
 
 /* ── PRINT / SCREENSHOT MODE ──────────────────── */
 @media print{
-  .left,.no-print{display:none!important}
-  .app{display:block}
-  .right{padding:0;background:#fff}
-  body{background:#fff}
-  .customer-view{background:#fff;padding:0}
+  @page{margin:.45in .5in}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{background:#fff!important}
+  .left,.no-print,.empty-state,.dp-toast{display:none!important}
+  .app{display:block!important;min-height:unset}
+  .right{display:block!important;padding:0!important;background:#fff!important;width:100%!important;overflow:visible!important}
+  #order-card-wrap{display:block!important;width:100%!important;justify-content:unset!important}
+  .order-card{border:1px solid #ccc!important;border-radius:4px!important;max-width:100%!important;width:100%!important;box-shadow:none!important;page-break-inside:avoid}
+  .customer-view{background:#f0f2ec!important;padding:0!important}
   .cv-header,.cv-back{display:none!important}
-  .order-card{border:none;border-radius:0;max-width:100%;box-shadow:none;width:100%}
+  .rc-band,.rc-footer,.rc-status-pill,.rc-pay-badge,.rc-tl-node{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
 </style>
 </head>
