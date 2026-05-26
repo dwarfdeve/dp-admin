@@ -165,17 +165,38 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
 .rc-footer-brand{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#7ec84a}
 .rc-footer-ref{font-size:10px;font-family:'JetBrains Mono',monospace;color:#555}
 
+/* ── CUSTOMER TRACKING VIEW ──────────────────── */
+.customer-view{display:none;flex-direction:column;align-items:center;min-height:100vh;background:#f0f2ec;padding:36px 16px 72px}
+.cv-header{width:100%;max-width:680px;margin-bottom:22px}
+.cv-header-eyebrow{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.18em;color:#888;margin-bottom:5px}
+.cv-header-title{font-size:24px;font-weight:900;color:#111;letter-spacing:-.3px}
+.cv-header-sub{font-size:13px;color:#888;margin-top:4px}
+.cv-back{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#3d6e22;margin-bottom:20px;cursor:pointer;text-decoration:none}
+.cv-back:hover{text-decoration:underline}
+
+/* ── SHARE / ACTION BUTTONS ──────────────────── */
+.share-btn{width:100%;padding:11px;background:linear-gradient(135deg,#1a3d0a,#3d6e22);color:#fff;border-radius:var(--radius-sm);font-size:13px;font-weight:700;transition:opacity .15s}
+.share-btn:hover{opacity:.88}
+
+/* ── TOAST ───────────────────────────────────── */
+.dp-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#111;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;white-space:nowrap;pointer-events:none;border:1px solid #333}
+.dp-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
 /* ── PRINT / SCREENSHOT MODE ──────────────────── */
 @media print{
   .left,.no-print{display:none!important}
   .app{display:block}
   .right{padding:0;background:#fff}
   body{background:#fff}
+  .customer-view{background:#fff;padding:0}
+  .cv-header,.cv-back{display:none!important}
   .order-card{border:none;border-radius:0;max-width:100%;box-shadow:none;width:100%}
 }
 </style>
 </head>
 <body>
+<div class="customer-view" id="customer-view"></div>
+<div class="dp-toast" id="dp-toast"></div>
 <div class="app">
 
   <!-- ════════════════════════════════════════
@@ -241,6 +262,7 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
 
       <!-- ACTIONS -->
       <div id="action-controls" style="display:none" class="action-btns">
+        <button class="share-btn" onclick="generateShareLink()">🔗 Copy Customer Share Link</button>
         <button class="print-btn" onclick="window.print()">🖨️ Print / Screenshot</button>
         <button class="clear-btn" onclick="clearOrder()">✕ Clear &amp; New Order</button>
       </div>
@@ -413,16 +435,15 @@ function makeBarcodesvg(ref) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${x}" height="${H}" viewBox="0 0 ${x} ${H}" style="display:block;flex-shrink:0">${rects.join("")}</svg>`;
 }
 
-function renderCard() {
-  if (!order) return;
+function buildReceiptHTML(showInternalNotes) {
   const pill = STATUS_PILLS[Math.min(currentStep, STATUS_PILLS.length - 1)];
-  const internalNote = document.getElementById("note-input") ? document.getElementById("note-input").value.trim() : "";
+  const internalNote = showInternalNotes && document.getElementById("note-input")
+    ? document.getElementById("note-input").value.trim() : "";
   const total = calcTotal();
   const bc = makeBarcodesvg(order.ref);
-
   const orderItems = order.items.filter(i => i.name !== "🛡️ Shipping Insurance");
 
-  const html = `
+  return `
   <div class="order-card" id="order-card">
 
     <div class="rc-band"></div>
@@ -523,7 +544,7 @@ function renderCard() {
       </div>
     </div>
 
-    ${order.notes || internalNote ? `
+    ${(order.notes || internalNote) ? `
     <div class="rc-section">
       <div class="rc-section-title">Notes</div>
       ${order.notes ? `<div class="rc-notes-box">📝 ${order.notes}</div>` : ""}
@@ -539,12 +560,88 @@ function renderCard() {
     </div>
 
   </div>`;
+}
 
+function renderCard() {
+  if (!order) return;
   const wrap = document.getElementById("order-card-wrap");
-  wrap.innerHTML = html;
+  wrap.innerHTML = buildReceiptHTML(true);
   wrap.style.display = "flex";
   document.getElementById("empty-state").style.display = "none";
 }
+
+// ═══════════════════════════════════════════════════════
+//  SHARE LINK
+// ═══════════════════════════════════════════════════════
+function generateShareLink() {
+  if (!order) return;
+  const data = {
+    ...order,
+    step: currentStep,
+    paymentDone,
+    paymentTime: paymentTime ? paymentTime.toISOString() : null,
+    stepTimes: stepTimes.map(t => t ? t.toISOString() : null)
+  };
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    const url = location.origin + location.pathname + "#dp=" + encoded;
+    navigator.clipboard.writeText(url).then(() => {
+      showToast("✓ Share link copied — send it to your customer");
+    }).catch(() => {
+      prompt("Copy this tracking link:", url);
+    });
+  } catch(e) {
+    showToast("⚠ Could not generate link");
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById("dp-toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+// ═══════════════════════════════════════════════════════
+//  CUSTOMER VIEW (loaded from share link)
+// ═══════════════════════════════════════════════════════
+function loadFromHash() {
+  const hash = location.hash;
+  if (!hash.startsWith("#dp=")) return;
+  try {
+    const raw = JSON.parse(decodeURIComponent(escape(atob(hash.slice(4)))));
+    order = {
+      ref: raw.ref, dateStr: raw.dateStr, timeStr: raw.timeStr,
+      name: raw.name, contact: raw.contact, location: raw.location,
+      payment: raw.payment, insurance: raw.insurance,
+      notes: raw.notes, items: raw.items || [], generatedDate: raw.generatedDate
+    };
+    currentStep = raw.step || 1;
+    paymentDone = !!raw.paymentDone;
+    paymentTime = raw.paymentTime ? new Date(raw.paymentTime) : null;
+    stepTimes = (raw.stepTimes || []).map(t => t ? new Date(t) : null);
+    showCustomerView();
+  } catch(e) {
+    console.error("Invalid share link", e);
+  }
+}
+
+function showCustomerView() {
+  document.querySelector(".app").style.display = "none";
+  const cv = document.getElementById("customer-view");
+  cv.style.display = "flex";
+  const pill = STATUS_PILLS[Math.min(currentStep, STATUS_PILLS.length - 1)];
+  cv.innerHTML = `
+    <div class="cv-header">
+      <div class="cv-header-eyebrow">📦 Order Tracking</div>
+      <div class="cv-header-title">${order.ref}</div>
+      <div class="cv-header-sub">Live shipment status &nbsp;·&nbsp; <strong style="color:#3d6e22">${pill.label}</strong></div>
+    </div>
+    ${buildReceiptHTML(false)}
+  `;
+}
+
+window.addEventListener("DOMContentLoaded", loadFromHash);
 
 // ═══════════════════════════════════════════════════════
 //  CONTROLS
