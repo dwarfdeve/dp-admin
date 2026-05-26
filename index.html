@@ -261,6 +261,13 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
       </div>
 
       <!-- NOTES -->
+      <!-- DATE / TIME OVERRIDE -->
+      <div id="datetime-controls" style="display:none">
+        <div class="section-label">Receipt Date &amp; Time</div>
+        <input type="datetime-local" class="note-input" id="datetime-input" style="min-height:auto;padding:9px 12px;resize:none" oninput="updateDateTime()"/>
+      </div>
+
+      <!-- NOTES -->
       <div id="note-controls" style="display:none">
         <div class="section-label">Internal Notes</div>
         <textarea class="note-input" id="note-input" placeholder="Tracking number, notes, special instructions..." oninput="updateNotes()"></textarea>
@@ -561,7 +568,7 @@ function buildReceiptHTML(showInternalNotes, showQR) {
       <div class="rc-footer-left">
         <div class="rc-footer-brand">
           <svg viewBox="0 0 100 120" fill="currentColor" width="12" height="14"><path d="M50 118 L48 82 C43 83 37 85 32 83 C29 76 33 69 39 65 C33 67 26 66 21 62 C20 55 25 50 31 48 C24 46 16 43 12 37 C15 30 22 28 29 29 C24 23 22 15 24 8 C31 8 37 14 40 21 C42 13 46 7 50 4 C54 7 58 13 60 21 C63 14 69 8 76 8 C78 15 76 23 71 29 C78 28 85 30 88 37 C84 43 76 46 69 48 C75 50 80 55 79 62 C74 66 67 67 61 65 C67 69 71 76 68 83 C63 85 57 83 52 82 Z"/></svg>
-          dwarfplug.com
+          Dwarf Plug Shipping Agency
         </div>
         <div class="rc-footer-ref">${order.ref} · Generated ${order.generatedDate}</div>
       </div>
@@ -680,10 +687,17 @@ window.addEventListener("DOMContentLoaded", loadFromHash);
 //  CONTROLS
 // ═══════════════════════════════════════════════════════
 function showControls() {
-  ["step-controls","pay-controls","note-controls","action-controls"].forEach(id => {
+  ["step-controls","pay-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "block";
   });
+  // Pre-fill datetime input with the order's parsed time
+  const dtInput = document.getElementById("datetime-input");
+  if (dtInput && order) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    dtInput.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }
   renderStepBtns();
   updatePayBtn();
 }
@@ -764,6 +778,18 @@ function updateNotes() {
   if (order) renderCard();
 }
 
+function updateDateTime() {
+  if (!order) return;
+  const input = document.getElementById("datetime-input");
+  if (!input || !input.value) return;
+  const d = new Date(input.value);
+  if (isNaN(d.getTime())) return;
+  order.dateStr = d.toLocaleDateString("en-US", {weekday:"short",year:"numeric",month:"short",day:"numeric"});
+  order.timeStr = d.toLocaleTimeString("en-US", {hour:"2-digit",minute:"2-digit"});
+  order.generatedDate = d.toLocaleDateString("en-US", {month:"short",day:"numeric",year:"numeric"});
+  renderCard();
+}
+
 function clearOrder() {
   order = null;
   paymentDone = false;
@@ -774,7 +800,7 @@ function clearOrder() {
   document.getElementById("note-input").value = "";
   document.getElementById("order-card-wrap").style.display = "none";
   document.getElementById("empty-state").style.display = "flex";
-  ["step-controls","pay-controls","note-controls","action-controls"].forEach(id => {
+  ["step-controls","pay-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
