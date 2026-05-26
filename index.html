@@ -184,6 +184,26 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
 .share-btn{width:100%;padding:11px;background:linear-gradient(135deg,#1a3d0a,#3d6e22);color:#fff;border-radius:var(--radius-sm);font-size:13px;font-weight:700;transition:opacity .15s}
 .share-btn:hover{opacity:.88}
 
+/* ── ADDRESS / DISTRICT CONTROLS ─────────────── */
+.addr-select{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--fg2);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5448'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+.addr-select:focus{outline:none;border-color:var(--green)}
+.addr-select option{background:var(--bg3);color:var(--fg)}
+.addr-textarea{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--fg2);resize:vertical;min-height:60px;margin-top:8px}
+.addr-textarea:focus{outline:none;border-color:var(--green)}
+.addr-textarea::placeholder{color:var(--fg4)}
+
+/* ── ORDER HISTORY ────────────────────────────── */
+.hist-wrap{border-top:1px solid var(--border);padding-top:16px;margin-top:4px}
+.hist-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.hist-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .15s}
+.hist-item:hover{border-color:var(--border2)}
+.hist-item-info{flex:1;min-width:0}
+.hist-item-ref{font-size:12px;font-weight:700;color:var(--fg);font-family:'JetBrains Mono',monospace}
+.hist-item-sub{font-size:11px;color:var(--fg4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-item-del{font-size:14px;color:var(--fg4);flex-shrink:0;padding:2px 4px;border-radius:4px;transition:color .15s}
+.hist-item-del:hover{color:var(--red)}
+.hist-empty{font-size:12px;color:var(--fg4);text-align:center;padding:12px 0}
+
 /* ── TOAST ───────────────────────────────────── */
 .dp-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#111;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;white-space:nowrap;pointer-events:none;border:1px solid #333}
 .dp-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -264,7 +284,31 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
         </div>
       </div>
 
-      <!-- NOTES -->
+      <!-- DELIVERY ADDRESS -->
+      <div id="addr-controls" style="display:none">
+        <div class="section-label">Delivery Address</div>
+        <select class="addr-select" id="district-select" onchange="updateDistrict()">
+          <option value="">— Select District —</option>
+          <option>Western Area Urban (Freetown)</option>
+          <option>Western Area Rural</option>
+          <option>Bo District</option>
+          <option>Bombali District</option>
+          <option>Bonthe District</option>
+          <option>Falaba District</option>
+          <option>Kailahun District</option>
+          <option>Kambia District</option>
+          <option>Karene District</option>
+          <option>Kenema District</option>
+          <option>Koinadugu District</option>
+          <option>Kono District</option>
+          <option>Moyamba District</option>
+          <option>Port Loko District</option>
+          <option>Pujehun District</option>
+          <option>Tonkolili District</option>
+        </select>
+        <textarea class="addr-textarea" id="addr-input" placeholder="Street / area / landmark..." oninput="updateAddress()"></textarea>
+      </div>
+
       <!-- DATE / TIME OVERRIDE -->
       <div id="datetime-controls" style="display:none">
         <div class="section-label">Receipt Date &amp; Time</div>
@@ -282,6 +326,12 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
         <button class="share-btn" onclick="generateShareLink()">🔗 Copy Customer Share Link</button>
         <button class="print-btn" onclick="window.print()">🖨️ Print / Screenshot</button>
         <button class="clear-btn" onclick="clearOrder()">✕ Clear &amp; New Order</button>
+      </div>
+
+      <!-- ORDER HISTORY -->
+      <div class="hist-wrap" id="hist-wrap" style="display:none">
+        <div class="section-label">Recent Orders</div>
+        <div class="hist-list" id="hist-list"></div>
       </div>
 
     </div>
@@ -384,7 +434,7 @@ function parseOrder() {
   if (insurance === "Yes") items.push({ name: "🛡️ Shipping Insurance", qty: "1", price: "$20" });
 
   const generatedDate = now.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-  order = { ref, dateStr, timeStr, name, contact, location, payment, insurance, notes, items, generatedDate };
+  order = { ref, dateStr, timeStr, name, contact, location, payment, insurance, notes, items, generatedDate, address: "" };
   paymentDone = false;
   paymentTime = null;
   currentStep = 1;
@@ -392,6 +442,7 @@ function parseOrder() {
 
   renderCard();
   showControls();
+  saveToHistory();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -491,7 +542,8 @@ function buildReceiptHTML(showInternalNotes, showQR) {
         <div class="rc-col-label">Ship To</div>
         <div class="rc-field"><span class="rc-field-ico">👤</span>${order.name}</div>
         <div class="rc-field"><span class="rc-field-ico">📱</span>${order.contact}</div>
-        <div class="rc-field"><span class="rc-field-ico">🌍</span>${order.location}</div>
+        <div class="rc-field"><span class="rc-field-ico">🌍</span>${order.location || "—"}</div>
+        ${order.address ? `<div class="rc-field" style="align-items:flex-start"><span class="rc-field-ico" style="margin-top:1px">📍</span><span style="line-height:1.4">${order.address}</span></div>` : ""}
       </div>
       <div class="rc-info-col">
         <div class="rc-col-label">Order Details</div>
@@ -658,7 +710,8 @@ function loadFromHash() {
       ref: raw.ref, dateStr: raw.dateStr, timeStr: raw.timeStr,
       name: raw.name, contact: raw.contact, location: raw.location,
       payment: raw.payment, insurance: raw.insurance,
-      notes: raw.notes, items: raw.items || [], generatedDate: raw.generatedDate
+      notes: raw.notes, items: raw.items || [], generatedDate: raw.generatedDate,
+      address: raw.address || ""
     };
     currentStep = raw.step || 1;
     paymentDone = !!raw.paymentDone;
@@ -685,16 +738,25 @@ function showCustomerView() {
   `;
 }
 
-window.addEventListener("DOMContentLoaded", loadFromHash);
+window.addEventListener("DOMContentLoaded", () => { loadFromHash(); loadHistory(); });
 
 // ═══════════════════════════════════════════════════════
 //  CONTROLS
 // ═══════════════════════════════════════════════════════
 function showControls() {
-  ["step-controls","pay-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
+  ["step-controls","pay-controls","addr-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "block";
   });
+  // Pre-populate district select if order already has a location
+  const distSel = document.getElementById("district-select");
+  if (distSel && order) {
+    const opts = Array.from(distSel.options);
+    const match = opts.find(o => o.value === order.location);
+    distSel.value = match ? order.location : "";
+  }
+  const addrTA = document.getElementById("addr-input");
+  if (addrTA && order) addrTA.value = order.address || "";
   // Pre-fill datetime input with the order's parsed time
   const dtInput = document.getElementById("datetime-input");
   if (dtInput && order) {
@@ -794,6 +856,92 @@ function updateDateTime() {
   renderCard();
 }
 
+function updateDistrict() {
+  if (!order) return;
+  const sel = document.getElementById("district-select");
+  order.location = sel ? sel.value : order.location;
+  saveToHistory();
+  renderCard();
+}
+
+function updateAddress() {
+  if (!order) return;
+  const ta = document.getElementById("addr-input");
+  order.address = ta ? ta.value.trim() : "";
+  saveToHistory();
+  renderCard();
+}
+
+// ═══════════════════════════════════════════════════════
+//  ORDER HISTORY (localStorage)
+// ═══════════════════════════════════════════════════════
+const HIST_KEY = "dp_order_history";
+const HIST_MAX = 20;
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); } catch(e) { return []; }
+}
+
+function saveToHistory() {
+  if (!order) return;
+  const hist = getHistory().filter(h => h.order.ref !== order.ref);
+  hist.unshift({
+    savedAt: new Date().toISOString(),
+    order: { ...order },
+    currentStep,
+    paymentDone,
+    paymentTime: paymentTime ? paymentTime.toISOString() : null,
+    stepTimes: stepTimes.map(t => t ? t.toISOString() : null)
+  });
+  localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, HIST_MAX)));
+  loadHistory();
+}
+
+function loadHistory() {
+  const hist = getHistory();
+  const wrap = document.getElementById("hist-wrap");
+  const list = document.getElementById("hist-list");
+  if (!wrap || !list) return;
+  if (hist.length === 0) { wrap.style.display = "none"; return; }
+  wrap.style.display = "block";
+  list.innerHTML = hist.map((h, i) => {
+    const d = new Date(h.savedAt);
+    const when = d.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " +
+                 d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+    const pill = STATUS_PILLS[Math.min(h.currentStep, STATUS_PILLS.length - 1)];
+    return `<div class="hist-item" onclick="restoreFromHistory(${i})">
+      <div class="hist-item-info">
+        <div class="hist-item-ref">${h.order.ref}</div>
+        <div class="hist-item-sub">${h.order.name} · ${pill.label} · ${when}</div>
+      </div>
+      <button class="hist-item-del" onclick="deleteFromHistory(event,${i})" title="Remove">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function restoreFromHistory(idx) {
+  const hist = getHistory();
+  const h = hist[idx];
+  if (!h) return;
+  order = { ...h.order, address: h.order.address || "" };
+  currentStep = h.currentStep || 1;
+  paymentDone = !!h.paymentDone;
+  paymentTime = h.paymentTime ? new Date(h.paymentTime) : null;
+  stepTimes = (h.stepTimes || []).map(t => t ? new Date(t) : null);
+  document.getElementById("note-input").value = "";
+  renderCard();
+  showControls();
+  showToast("✓ Order " + order.ref + " restored");
+}
+
+function deleteFromHistory(e, idx) {
+  e.stopPropagation();
+  const hist = getHistory();
+  hist.splice(idx, 1);
+  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  loadHistory();
+}
+
 function clearOrder() {
   order = null;
   paymentDone = false;
@@ -802,9 +950,11 @@ function clearOrder() {
   stepTimes = [];
   document.getElementById("paste-ta").value = "";
   document.getElementById("note-input").value = "";
+  document.getElementById("addr-input").value = "";
+  document.getElementById("district-select").value = "";
   document.getElementById("order-card-wrap").style.display = "none";
   document.getElementById("empty-state").style.display = "flex";
-  ["step-controls","pay-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
+  ["step-controls","pay-controls","addr-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
