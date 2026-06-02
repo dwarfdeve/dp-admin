@@ -207,6 +207,42 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
 .dp-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#111;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;white-space:nowrap;pointer-events:none;border:1px solid #333}
 .dp-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ── TRACKING GENERATOR ───────────────────────── */
+.trk-section{border-top:1px solid var(--border);padding-top:16px;margin-top:4px}
+.trk-row{display:flex;gap:7px;align-items:stretch}
+.trk-select{flex:1;padding:9px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--fg2);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5448'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.trk-select:focus{outline:none;border-color:var(--green)}
+.trk-gen-btn{padding:9px 12px;background:var(--green3);color:#fff;border-radius:var(--radius-sm);font-size:12px;font-weight:700;white-space:nowrap;transition:opacity .15s}
+.trk-gen-btn:hover{opacity:.85}
+.trk-result{display:none;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;margin-top:8px}
+.trk-result-num{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green-text);letter-spacing:2px;word-break:break-all}
+.trk-result-carrier{font-size:10px;color:var(--fg4);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.trk-actions{display:flex;gap:6px;margin-top:8px}
+.trk-copy-btn{flex:1;padding:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:11px;font-weight:700;color:var(--fg2);transition:background .15s}
+.trk-copy-btn:hover{background:var(--bg4)}
+.trk-clear-btn{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--fg4);transition:background .15s}
+.trk-clear-btn:hover{background:var(--bg3)}
+
+/* ── RECEIPT TRACKING SECTION ─────────────────── */
+.rc-trk-carrier{display:flex;align-items:center;justify-content:space-between;padding:10px 28px;background:#f5f5f5;border-bottom:1px dashed #ddd}
+.rc-trk-carrier-name{font-size:13px;font-weight:900;color:#111;letter-spacing:.5px}
+.rc-trk-num{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#222;letter-spacing:2.5px}
+.rc-trk-scans{padding:10px 28px 14px;border-bottom:1px dashed #d5d5d5}
+.rc-trk-scan-row{display:flex;align-items:flex-start;gap:12px;padding:5px 0;border-bottom:1px dotted #eee;font-size:11px}
+.rc-trk-scan-row:last-child{border-bottom:none}
+.rc-trk-scan-time{font-family:'JetBrains Mono',monospace;color:#888;font-size:10px;min-width:100px;flex-shrink:0;padding-top:1px}
+.rc-trk-scan-loc{font-weight:700;color:#333;min-width:140px;flex-shrink:0}
+.rc-trk-scan-event{color:#555;flex:1}
+.rc-trk-scan-row.latest .rc-trk-scan-event{color:#1a5c08;font-weight:700}
+.rc-trk-scan-row.latest .rc-trk-scan-loc{color:#1a5c08}
+
+/* ── STAGE-SPECIFIC BAND PALETTES ─────────────── */
+.rc-band-received{background:linear-gradient(90deg,#2563eb,#60a5fa,#2563eb,#60a5fa,#2563eb)}
+.rc-band-confirmed{background:linear-gradient(90deg,#d97706,#fbbf24,#d97706,#fbbf24,#d97706)}
+.rc-band-packed{background:linear-gradient(90deg,#7c3aed,#a855f7,#7c3aed,#a855f7,#7c3aed)}
+.rc-band-transit{background:linear-gradient(90deg,#ea580c,#fb923c,#ea580c,#fb923c,#ea580c)}
+.rc-band-delivered{background:linear-gradient(90deg,#16a34a,#4ade80,#16a34a,#4ade80,#16a34a)}
+
 /* ── PRINT / SCREENSHOT MODE ──────────────────── */
 @media print{
   @page{margin:.45in .5in}
@@ -458,10 +494,37 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
         <input type="datetime-local" class="note-input" id="datetime-input" style="min-height:auto;padding:9px 12px;resize:none" oninput="updateDateTime()"/>
       </div>
 
+      <!-- TRACKING NUMBER GENERATOR -->
+      <div id="trk-controls" class="trk-section" style="display:none">
+        <div class="section-label">Tracking Number</div>
+        <div class="trk-row">
+          <select class="trk-select" id="carrier-select">
+            <option value="">— Select Carrier —</option>
+            <option value="usps">USPS Priority Mail</option>
+            <option value="fedex">FedEx Ground</option>
+            <option value="dhl">DHL Express</option>
+            <option value="ups">UPS Standard</option>
+            <option value="royal">Royal Mail</option>
+            <option value="canada">Canada Post</option>
+            <option value="aramex">Aramex</option>
+            <option value="tnt">TNT / FedEx Int'l</option>
+          </select>
+          <button class="trk-gen-btn" onclick="generateTracking()">⚡ Generate</button>
+        </div>
+        <div class="trk-result" id="tracking-result">
+          <div class="trk-result-carrier" id="tracking-carrier-label"></div>
+          <div class="trk-result-num" id="tracking-display"></div>
+          <div class="trk-actions">
+            <button class="trk-copy-btn" onclick="copyTracking()">📋 Copy Tracking #</button>
+            <button class="trk-clear-btn" onclick="clearTracking()">✕</button>
+          </div>
+        </div>
+      </div>
+
       <!-- NOTES -->
       <div id="note-controls" style="display:none">
         <div class="section-label">Internal Notes</div>
-        <textarea class="note-input" id="note-input" placeholder="Tracking number, notes, special instructions..." oninput="updateNotes()"></textarea>
+        <textarea class="note-input" id="note-input" placeholder="Additional notes, special instructions..." oninput="updateNotes()"></textarea>
       </div>
 
       <!-- ACTIONS -->
@@ -500,8 +563,43 @@ textarea,input,select{font-family:inherit;color:var(--fg)}
 let order = null;
 let paymentDone = false;
 let paymentTime = null;
-let currentStep = 0; // 0 = nothing parsed, 1–5 = step index
+let currentStep = 0;
 let stepTimes = [];
+let trackingNum = null;
+let trackingCarrier = null;
+let trackingGenerated = null;
+
+// Stage color palettes — each step gets its own identity
+const STAGE_COLORS = [
+  null,
+  { band:'rc-band-received',  bdr:'#3b82f6', pill:'spl-received',  label:'Order Received'   },
+  { band:'rc-band-confirmed', bdr:'#f59e0b', pill:'spl-confirmed', label:'Processing'        },
+  { band:'rc-band-packed',    bdr:'#9333ea', pill:'spl-packed',    label:'Packed'            },
+  { band:'rc-band-transit',   bdr:'#f97316', pill:'spl-transit',   label:'In Transit'        },
+  { band:'rc-band-delivered', bdr:'#22c55e', pill:'spl-delivered', label:'Delivered'         },
+];
+
+const CARRIERS = {
+  usps:   { name:'USPS Priority Mail',   flag:'🇺🇸', abbr:'USPS'   },
+  fedex:  { name:'FedEx Ground',         flag:'🌐', abbr:'FedEx'  },
+  dhl:    { name:'DHL Express',          flag:'🌍', abbr:'DHL'    },
+  ups:    { name:'UPS Standard',         flag:'📦', abbr:'UPS'    },
+  royal:  { name:'Royal Mail',           flag:'🇬🇧', abbr:'RM'     },
+  canada: { name:'Canada Post',          flag:'🍁', abbr:'CP'     },
+  aramex: { name:'Aramex',               flag:'🌏', abbr:'ARMX'   },
+  tnt:    { name:'TNT / FedEx Int\'l',   flag:'✈️', abbr:'TNT'    },
+};
+
+const ORIGIN_HUBS = {
+  'United States':['Los Angeles, CA','Chicago, IL','New York, NY','Dallas, TX','Atlanta, GA'],
+  'United Kingdom':['London Heathrow Hub','Birmingham Sort Centre','Manchester Gateway'],
+  'Canada':['Toronto Hub','Vancouver Sort Centre','Montreal Gateway'],
+  'Australia':['Sydney Kingsford Hub','Melbourne Sort Centre','Brisbane Gateway'],
+  'Germany':['Frankfurt Hub','Berlin Gateway','Hamburg Sort Centre'],
+  'Netherlands':['Amsterdam Schiphol Hub','Rotterdam Gateway'],
+  'France':['Paris CDG Hub','Lyon Sort Centre'],
+  default:['Origin Processing Centre','International Dispatch Hub','Regional Fulfilment Centre'],
+};
 
 const STEPS = [
   { label: "Order Received",         sub: "Order submitted via shop",     icon: "📩" },
@@ -647,19 +745,47 @@ function makeBarcodesvg(ref) {
 }
 
 function buildReceiptHTML(showInternalNotes, showQR) {
-  const pill = STATUS_PILLS[Math.min(currentStep, STATUS_PILLS.length - 1)];
+  const sc   = STAGE_COLORS[Math.min(currentStep, STAGE_COLORS.length - 1)] || STAGE_COLORS[1];
   const internalNote = showInternalNotes && document.getElementById("note-input")
     ? document.getElementById("note-input").value.trim() : "";
   const total = calcTotal();
   const bc = makeBarcodesvg(order.ref);
   const orderItems = order.items.filter(i => i.name !== "🛡️ Shipping Insurance");
 
+  // Carrier tracking section
+  let trkSection = "";
+  if (trackingNum && trackingCarrier) {
+    const carrier = CARRIERS[trackingCarrier] || { name: trackingCarrier, flag:'📦', abbr:'—' };
+    const scans = buildScanHistory();
+    const scanRows = scans.length ? scans.map((s, i) => `
+      <div class="rc-trk-scan-row${i === scans.length-1 ? ' latest' : ''}">
+        <span class="rc-trk-scan-time">${s.time ? fmtTime(s.time) : '—'}</span>
+        <span class="rc-trk-scan-loc">${s.loc}</span>
+        <span class="rc-trk-scan-event">${s.event}</span>
+      </div>`).join('') : `<div style="color:#999;font-size:12px;padding:6px 0">Tracking pending first scan</div>`;
+    trkSection = `
+    <div class="rc-trk-carrier">
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:#888;margin-bottom:3px">${carrier.flag} ${carrier.name}</div>
+        <div class="rc-trk-num">${trackingNum}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:3px">Estimated Delivery</div>
+        <div style="font-size:13px;font-weight:800;color:#111">${buildETA()}</div>
+      </div>
+    </div>
+    <div class="rc-trk-scans">
+      <div class="rc-section-title">Tracking History</div>
+      ${scanRows}
+    </div>`;
+  }
+
   return `
   <div class="order-card" id="order-card">
 
-    <div class="rc-band"></div>
+    <div class="rc-band ${sc.band}" style="height:8px"></div>
 
-    <div class="rc-header">
+    <div class="rc-header" style="border-bottom:3px solid ${sc.bdr}">
       <div class="rc-brand">
         <svg viewBox="0 0 100 120" fill="#2d5a16" width="30" height="36"><path d="M50 118 L48 82 C43 83 37 85 32 83 C29 76 33 69 39 65 C33 67 26 66 21 62 C20 55 25 50 31 48 C24 46 16 43 12 37 C15 30 22 28 29 29 C24 23 22 15 24 8 C31 8 37 14 40 21 C42 13 46 7 50 4 C54 7 58 13 60 21 C63 14 69 8 76 8 C78 15 76 23 71 29 C78 28 85 30 88 37 C84 43 76 46 69 48 C75 50 80 55 79 62 C74 66 67 67 61 65 C67 69 71 76 68 83 C63 85 57 83 52 82 Z"/></svg>
         <div>
@@ -668,10 +794,10 @@ function buildReceiptHTML(showInternalNotes, showQR) {
         </div>
       </div>
       <div class="rc-doc-info">
-        <div class="rc-doc-label">Tracking Number</div>
+        <div class="rc-doc-label">Order Reference</div>
         <div class="rc-doc-ref">${order.ref}</div>
         <div class="rc-doc-date">${order.dateStr} &nbsp;·&nbsp; ${order.timeStr}</div>
-        <div class="rc-status-pill ${pill.cls}">${pill.label}</div>
+        <div class="rc-status-pill ${sc.pill}">${sc.label}</div>
       </div>
     </div>
 
@@ -697,6 +823,8 @@ function buildReceiptHTML(showInternalNotes, showQR) {
         ${order.insurance === "Yes" ? `<div class="rc-field"><span class="rc-field-ico">🛡️</span>Insurance Included</div>` : ""}
       </div>
     </div>
+
+    ${trkSection}
 
     <div class="rc-section">
       <div class="rc-section-title">Order Items</div>
@@ -886,10 +1014,114 @@ function showCustomerView() {
 window.addEventListener("DOMContentLoaded", () => { loadFromHash(); loadHistory(); });
 
 // ═══════════════════════════════════════════════════════
+//  TRACKING NUMBER GENERATOR
+// ═══════════════════════════════════════════════════════
+function rndD(n) { let s=''; for(let i=0;i<n;i++) s+=Math.floor(Math.random()*10); return s; }
+function rndA(n) { const a='ABCDEFGHJKLMNPRSTUVWXYZ'; let s=''; for(let i=0;i<n;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
+
+function genTrackingNumber(carrier) {
+  switch(carrier) {
+    case 'usps':   return '9400' + rndD(4) + ' ' + rndD(4) + ' ' + rndD(4) + ' ' + rndD(4) + ' ' + rndD(2);
+    case 'fedex':  return rndD(4) + ' ' + rndD(4) + ' ' + rndD(4);
+    case 'dhl':    return rndD(3) + ' ' + rndD(7);
+    case 'ups':    return '1Z' + rndA(3) + rndD(3) + ' ' + Math.floor(Math.random()*9) + ' ' + rndD(4) + ' ' + rndD(4) + ' ' + rndD(2);
+    case 'royal':  return rndA(2) + rndD(3) + ' ' + rndD(4) + ' ' + rndA(2) + ' GB';
+    case 'canada': return rndD(4) + ' ' + rndD(4) + ' ' + rndD(4) + ' ' + rndD(4);
+    case 'aramex': return rndD(3) + ' ' + rndD(3) + ' ' + rndD(5);
+    case 'tnt':    return rndD(2) + rndA(2) + rndD(2) + ' ' + rndD(6);
+    default:       return rndD(4) + ' ' + rndD(4) + ' ' + rndD(4);
+  }
+}
+
+function generateTracking() {
+  const carrier = document.getElementById('carrier-select').value;
+  if (!carrier) { showToast('⚠️ Select a carrier first'); return; }
+  trackingNum = genTrackingNumber(carrier);
+  trackingCarrier = carrier;
+  trackingGenerated = new Date();
+  const cInfo = CARRIERS[carrier] || { name: carrier, flag:'📦' };
+  document.getElementById('tracking-carrier-label').textContent = cInfo.flag + ' ' + cInfo.name;
+  document.getElementById('tracking-display').textContent = trackingNum;
+  document.getElementById('tracking-result').style.display = 'block';
+  if (order) renderCard();
+  showToast('✓ Tracking number generated — appears on receipt');
+}
+
+function copyTracking() {
+  if (!trackingNum) return;
+  navigator.clipboard.writeText(trackingNum).then(() => showToast('✓ Tracking number copied to clipboard')).catch(() => {
+    try { const ta = document.createElement('textarea'); ta.value = trackingNum; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('✓ Copied'); } catch(e) {}
+  });
+}
+
+function clearTracking() {
+  trackingNum = null; trackingCarrier = null; trackingGenerated = null;
+  document.getElementById('tracking-result').style.display = 'none';
+  document.getElementById('carrier-select').value = '';
+  if (order) renderCard();
+}
+
+function buildScanHistory() {
+  if (!order) return [];
+  const loc = order.location || '';
+  const hubs = ORIGIN_HUBS[loc] || ORIGIN_HUBS.default;
+  const dest = order.city ? order.city + ', ' + loc : loc || 'Destination';
+  const scans = [];
+
+  const addScan = (baseTime, offsetHours, hub, event) => {
+    if (!baseTime) return;
+    const t = new Date(baseTime.getTime() + offsetHours * 3600000);
+    scans.push({ time: t, loc: hub, event });
+  };
+
+  // Step 1 — received
+  if (stepTimes[0]) addScan(stepTimes[0], 0, 'Online / Shop', 'Electronic shipping information received');
+  if (stepTimes[0]) addScan(stepTimes[0], 3, hubs[0] || 'Origin Processing Centre', 'Package accepted at origin facility');
+
+  // Step 2 — confirmed/paid
+  if (stepTimes[1]) addScan(stepTimes[1], 1, hubs[0] || 'Origin Processing Centre', 'Package sorted and assigned to dispatch queue');
+
+  // Step 3 — packed
+  if (stepTimes[2]) {
+    addScan(stepTimes[2], 0, hubs[0] || 'Origin Processing Centre', 'Processed: Package sealed and labeled');
+    addScan(stepTimes[2], 5, hubs[1] || 'International Gateway', 'Departed origin facility');
+  }
+
+  // Step 4 — in transit
+  if (stepTimes[3]) {
+    addScan(stepTimes[3], 0, hubs[1] || 'International Gateway', 'Arrived at international gateway');
+    addScan(stepTimes[3], 6, hubs[1] || 'International Gateway', 'Customs clearance — export processed');
+    addScan(stepTimes[3], 28, 'In Transit — International', 'In transit to destination country');
+    addScan(stepTimes[3], 52, dest, 'Arrived at destination sort facility');
+  }
+
+  // Step 5 — delivered
+  if (currentStep >= 5) {
+    const delivTime = stepTimes[4] || new Date();
+    scans.push({ time: delivTime, loc: dest, event: '✓ Delivered — Package left at delivery address' });
+  } else if (stepTimes[3]) {
+    addScan(stepTimes[3], 60, dest, 'Out for delivery — awaiting recipient');
+  }
+
+  return scans;
+}
+
+function buildETA() {
+  if (!order || !stepTimes[0]) return 'TBD';
+  if (currentStep >= 5) return 'Delivered ✓';
+  const base = stepTimes[0];
+  const days = currentStep <= 2 ? 10 : currentStep === 3 ? 5 : 2;
+  const eta = new Date(base.getTime() + days * 86400000);
+  const today = new Date();
+  if (eta < today) return 'Expected shortly';
+  return eta.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+// ═══════════════════════════════════════════════════════
 //  CONTROLS
 // ═══════════════════════════════════════════════════════
 function showControls() {
-  ["step-controls","pay-controls","addr-controls","datetime-controls","note-controls","action-controls"].forEach(id => {
+  ["step-controls","pay-controls","addr-controls","datetime-controls","trk-controls","note-controls","action-controls"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "block";
   });
@@ -1260,6 +1492,10 @@ function clearOrder() {
   paymentTime = null;
   currentStep = 0;
   stepTimes = [];
+  trackingNum = null;
+  trackingCarrier = null;
+  trackingGenerated = null;
+  document.getElementById("tracking-result").style.display = "none";
   document.getElementById("paste-ta").value = "";
   document.getElementById("note-input").value = "";
   document.getElementById("addr-input").value = "";
