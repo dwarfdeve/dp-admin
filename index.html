@@ -1520,23 +1520,34 @@ function clearOrder() {
 // PDF EXPORT
 // =====================================================================
 function exportPDF() {
+  if (!order) { alert('No order loaded — paste and parse an order first.'); return; }
   const card = document.getElementById('order-card');
-  if (!card) { alert('No order loaded — parse an order first.'); return; }
+  if (!card) { alert('Render the order card first.'); return; }
   const btn = document.getElementById('pdf-export-btn');
+  const ref = order.ref || 'order';
+  const trk = trackingNum || 'no-tracking';
+  const filename = 'DP-TrackSheet-' + ref + (trackingNum ? '-' + trk : '') + '.pdf';
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating PDF…'; }
+  // Clone card so we can ensure it is visible for html2pdf
+  const clone = card.cloneNode(true);
+  clone.style.cssText = 'position:fixed;left:-9999px;top:0;width:660px;background:#0a0a0a;color:#f0f0f0;font-family:Inter,sans-serif;z-index:-1;';
+  document.body.appendChild(clone);
   const opt = {
-    margin:       [8, 8, 8, 8],
-    filename:     'dp-track-' + (currentOrder?.trackingNumber || 'order') + '.pdf',
-    image:        { type: 'jpeg', quality: 0.97 },
-    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0a0a0a', logging: false },
+    margin:       [6, 6, 6, 6],
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#0a0a0a', logging: false, removeContainer: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
-  html2pdf().set(opt).from(card).save().then(() => {
+  html2pdf().set(opt).from(clone).save().then(() => {
+    document.body.removeChild(clone);
     if (btn) { btn.disabled = false; btn.textContent = '📄 Export PDF Track Sheet'; }
+    showToast('✓ PDF exported: ' + filename);
   }).catch(e => {
     console.error(e);
+    try { document.body.removeChild(clone); } catch(_){}
     if (btn) { btn.disabled = false; btn.textContent = '📄 Export PDF Track Sheet'; }
-    alert('PDF export failed. Try Print / Screenshot instead.');
+    alert('PDF export failed — try Print / Screenshot instead.');
   });
 }
 </script>
